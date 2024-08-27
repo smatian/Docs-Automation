@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 function Temp() {
   const [fileContent, setFileContent] = useState("");
@@ -9,6 +9,42 @@ function Temp() {
   const [breakTime, setBreakTime] = useState(10);
   const [breakInterval, setBreakInterval] = useState(100);
   const [eta, setEta] = useState("");
+  const [dragging, setDragging] = useState(false);
+
+  useEffect(() => {
+    // Add event listeners for drag and drop
+    const handleDrag = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setDragging(true);
+    };
+    const handleLeave = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setDragging(false);
+    };
+    const handleDrop = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setDragging(false);
+      const files = e.dataTransfer.files;
+      if (files.length > 0) {
+        handleFileUpload(files[0]);
+      }
+    };
+
+    // Attach the events to the whole document
+    document.addEventListener("dragover", handleDrag);
+    document.addEventListener("dragleave", handleLeave);
+    document.addEventListener("drop", handleDrop);
+
+    return () => {
+      // Clean up the event listeners
+      document.removeEventListener("dragover", handleDrag);
+      document.removeEventListener("dragleave", handleLeave);
+      document.removeEventListener("drop", handleDrop);
+    };
+  }, []);
 
   const handleFileUpload = (file) => {
     const reader = new FileReader();
@@ -18,17 +54,7 @@ function Temp() {
     reader.readAsText(file);
   };
 
-  const handleGoogleDriveSelection = () => {
-    console.log("handleGoogleDriveSelection");
-    chrome.runtime.sendMessage({ action: "googleDocs" });
-  };
-
-  const calculateETA = (
-    contentLength,
-    typingSpeed,
-    breakInterval,
-    breakTime
-  ) => {
+  const calculateETA = (contentLength, typingSpeed, breakInterval, breakTime) => {
     const wordsPerMinute = typingSpeed;
     const totalWords = contentLength / 5;
     const typingTimeMinutes = totalWords / wordsPerMinute;
@@ -57,41 +83,41 @@ function Temp() {
     }
   };
 
-  const handleDragOver = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-  };
-
-  const handleDrop = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const files = e.dataTransfer.files;
-    if (files.length > 0) {
-      handleFileUpload(files[0]);
-    }
-  };
-
   return (
     <div className="App">
+      {dragging && <div style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        color: '#fff',
+        fontSize: '24px',
+        zIndex: 1000,
+      }}>Drop files anywhere to upload</div>}
       <h1>Google Docs Auto Typer</h1>
-      <input
-        type="file"
-        onChange={(e) => handleFileUpload(e.target.files[0])}
-        accept=".txt,.docx"
-      />
       <div
         id="drag-drop-area"
-        onDragOver={handleDragOver}
-        onDrop={handleDrop}
         style={{
           border: "2px dashed #ccc",
           padding: "20px",
           borderRadius: "10px",
           textAlign: "center",
           marginTop: "20px",
+          cursor: "pointer",
         }}
       >
-        <p>Drag & Drop a .txt or .docx file here</p>
+        <p>Click or Drag & Drop a .txt or .docx file here</p>
+        <input
+          type="file"
+          onChange={(e) => handleFileUpload(e.target.files[0])}
+          accept=".txt,.docx"
+          style={{ display: 'none' }}
+        />
       </div>
       {" "}
       <div>
